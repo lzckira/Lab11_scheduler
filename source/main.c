@@ -1,15 +1,19 @@
-/*
- * test.c
+  
+/*	Author: zlian030
+ *  Partner(s) Name: 
+ *	Lab Section:
+ *	Assignment: Lab #11  Exercise #1
+ *	Exercise Description: [optional - include for your own benefit]
  *
- * Created: 2019/7/6 18:06:56
- * Author : Coco
- */ 
+ *	I acknowledge all content contained herein, excluding template or example
+ *	code, is my own original work.
+ */
 #include <avr/io.h>
 #include "scheduler.h"
 //#include "bit.h"
 //#include "io.c"
 //#include "io.h"
-//#include "keypad.h"
+#include "keypad.h"
 //#include "lcd_8bit_task.h"
 //#include "queue.h"
 //#include "seven_seg.h"
@@ -39,7 +43,7 @@ int pauseButtonSMTick(int state){
 	switch(state){
 		case pauseButton_wait:break;
 		case pauseButton_press:
-			pause = (pause == 0)? 1:0;//toggle pause
+			pause = (pause == 0)? 1:0; // toggle pause
 			break;
 		case pauseButton_release: break;
 	}
@@ -51,14 +55,14 @@ enum toggleLED0_States { toggleLED0_wait, toggleLED0_blink};
 
 int toggleLED0SMTick(int state){
 		switch(state){
-			case toggleLED0_wait:state = (!pause)? toggleLED0_blink:toggleLED0_wait;break;
-			case toggleLED0_blink: state = (pause)? toggleLED0_wait:toggleLED0_blink;break;
+			case toggleLED0_wait: state = (!pause) ? toggleLED0_blink : toggleLED0_wait; break;
+			case toggleLED0_blink: state = (pause) ? toggleLED0_wait : toggleLED0_blink; break;
 			default: state = toggleLED0_wait; break;
 		}
 		switch(state){
-			case toggleLED0_wait:break;
+			case toggleLED0_wait: break;
 			case toggleLED0_blink:
-				led0_output=(led0_output == 0x00)? 0x01: 0x00;
+				led0_output = (led0_output == 0x00) ? 0x01 : 0x00;
 				break;
 		}
 		return state;
@@ -101,32 +105,35 @@ int displaySMTick(int state){
 		return state;
 }
 
+
+
 int main(void) {
+	unsigned char x;
     /* Insert DDR and PORT initializations */
 	/*unsigned char x;
 	DDRB = 0xFF; PORTB = 0x00;
 	DDRC = 0xF0; PORTC  = 0x0F;*/
-	DDRA = 0x00; PORTA = 0xFF;
+	DDRC = 0xF0; PORTC = 0x0F;
 	DDRB = 0xFF; PORTB = 0x00;
     /* Insert your solution below */
-    static task task1, task2, task3, task4;
-    task *tasks[] = {&task1, &task2, &task3, &task4};
-    const unsigned short numTasks = sizeof(tasks)/sizeof(task*);
+    //static task task1, task2, task3, task4;
+    //task *tasks[] = { &task1, &task2, &task3, &task4 };
+    //const unsigned short numTasks = sizeof(tasks)/sizeof(task*);
     
     //Task 1 (pauseButtonToggleSM)
     
-    task1.state = pauseButton_wait;//Task initial state
-    task1.period = 1;//Task Period
+    /*task1.state = pauseButton_wait;//Task initial state
+    task1.period = 1000;//Task Period
     task1.elapsedTime = task1.period;//Task current elapsed time.
     task1.TickFct = &pauseButtonSMTick;//Function pointer for the tick
     //Task 2 (toggleLED0SM)
     task2.state = toggleLED0_wait;//Task initial state
-    task2.period = 20;//Task Period
+    task2.period = 1000;//Task Period
     task2.elapsedTime = task2.period;//Task current elapsed time.
     task2.TickFct = &toggleLED0SMTick;//Function pointer for the tick
     //Task 3 (toggleLED1SM)
     task3.state = toggleLED1_wait;//Task initial state
-    task3.period = 40;//Task Period
+    task3.period = 200;//Task Period
     task3.elapsedTime = task3.period;//Task current elapsed time.
     task3.TickFct = &toggleLED1SMTick;//Function pointer for the tick
     //Task 4 (displaySM)
@@ -136,15 +143,16 @@ int main(void) {
     task4.TickFct = &displaySMTick;//Function pointer for the tick
     //Set the timer and turn it on
 	unsigned long int GCD;
+    */
     TimerSet(1);
     TimerOn();
     
     unsigned short i;//Scheduler for-loop iterator
-    while (1) {/*
+    while (1) {
 		x =  GetKeypadKey();
 		switch(x){
-			case '\0': PORTB = 0x1F;break;//All 5 LEDs on
-			case '1': PORTB = 0x01; break;//hexequivalent
+			case '\0': PORTB=0x1F; break;//All 5 LEDs on
+			case '1': PORTB =0x01; break;//hexequivalent
 			case '2': PORTB =0x02; break;
 			case '3': PORTB =0x03; break;
 			case '4': PORTB =0x04; break;
@@ -152,6 +160,7 @@ int main(void) {
 			case '6': PORTB =0x06; break;
 			case '7': PORTB =0x07; break;
 			case '8': PORTB =0x08; break;
+			case '9': PORTB =0x09; break;
 			case 'A': PORTB =0x0A; break;
 			case 'B': PORTB =0x0B; break;
 			case 'C': PORTB =0x0C; break;
@@ -159,17 +168,17 @@ int main(void) {
 			case '*': PORTB =0x0E; break;
 			case '0': PORTB =0x00; break;
 			case '#': PORTB =0x0F; break;
-			default: PORTB = 0x1B; break;//Should never occur, Middle LED off.
-		}*/
-		for(i = 0; i < numTasks; i++){//Scheduler code
-			if(tasks[i]->elapsedTime == tasks[i]->period){//Task is ready to tick
-				tasks[i]->state= tasks[i]->TickFct(tasks[i]->state);//set next state
-				tasks[i]->elapsedTime = 0;//Reset the elapsed time for next tick;
+			default: PORTB = 0x1B; break; //Should never occur, Middle LED off.
+		}
+/*		for (i = 0; i < numTasks; i++) { //Scheduler code
+			if (tasks[i]->elapsedTime == tasks[i]->period) { //Task is ready to tick
+				tasks[i]->state = tasks[i]->TickFct(tasks[i]->state); //set next state
+				tasks[i]->elapsedTime = 0; //Reset the elapsed time for next tick;
 			}
 			tasks[i]->elapsedTime += GCD; 
 			GCD = findGCD(GCD, tasks[i]->period);
 		}
-		while(!TimerFlag);
+*/		while(!TimerFlag);
 		TimerFlag = 0;
     }
     return 1;
