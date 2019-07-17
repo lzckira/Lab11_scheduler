@@ -11,8 +11,8 @@
 #include <avr/io.h>
 #include "scheduler.h"
 //#include "bit.h"
-//#include "io.c"
-//#include "io.h"
+#include "io.c"
+#include "io.h"
 #include "keypad.h"
 //#include "lcd_8bit_task.h"
 //#include "queue.h"
@@ -24,49 +24,53 @@ unsigned char led0_output = 0x00;
 unsigned char led1_output = 0x00;
 unsigned char pause = 0;
 unsigned char x;
-enum pauseButtonSM_States {pauseButton_wait, pauseButton_press, pauseButton_release};
-
+const unsigned char str[] = "CS120B is Legend... wait for it DARY!";
+enum LCDDisplay {scrolling};
+unsigned char j = 0;
 
 //Monitors button connected to PA0.
 //When button is pressed, shared variable "pause" is toggled.
-int pauseButtonSMTick(int state){
-	unsigned char press = ~PINA & 0x01;
-	switch(state){
-		case pauseButton_wait:
-			state = (press == 0x01)? pauseButton_press: pauseButton_wait; break;
-		case pauseButton_press:
-			state = pauseButton_release; break;
-		case pauseButton_release:
-			state = (press == 0x00)? pauseButton_wait: pauseButton_press; break;
-		default:
-			state = pauseButton_wait;break;
-	}
-	switch(state){
-		case pauseButton_wait:break;
-		case pauseButton_press:
-			x =  GetKeypadKey();
-			switch(x){
-				case '\0': PORTB=0x1F; break;//All 5 LEDs on
-				case '1': PORTB =0x01; break;//hexequivalent
-				case '2': PORTB =0x02; break;
-				case '3': PORTB =0x03; break;
-				case '4': PORTB =0x04; break;
-				case '5': PORTB =0x05; break;
-				case '6': PORTB =0x06; break;
-				case '7': PORTB =0x07; break;
-				case '8': PORTB =0x08; break;
-				case '9': PORTB =0x09; break;
-				case 'A': PORTB =0x0A; break;
-				case 'B': PORTB =0x0B; break;
-				case 'C': PORTB =0x0C; break;
-				case 'D': PORTB =0x0D; break;
-				case '*': PORTB =0x0E; break;
-				case '0': PORTB =0x00; break;
-				case '#': PORTB =0x0F; break;
-				default: PORTB = 0x1B; break; //Should never occur, Middle LED off.
+int LCDDisplaySM(int state){
+	static unsigned char scroll = 16;
+	static unsigned char disp = 0;
+	static unsigned long crusor = 0;
+	static unsigned long offset_trigger = 0;
+	static unsigned long offset = 0;
+	static unsigned long counter = 0;
+	static unsigned int i = 16;
+	unsigned long length = sizeof(str)/sizeof(str[0]);
+	switch (state){
+		case scrolling:
+			LCD_ClearScreen();
+            LCD_Cursor(16);
+            if(counter < (length +15)){
+				++counter;
+			for(i= 16;i > scroll; --i){
+				if ((crusor = (i-scroll-1 + offset)) >= (length -1)) {
+					disp = 32;
+				}
+				else{
+					disp = str[crusor];
+				}
+				LCD_Cursor(i);
+				LCD_WriteData(disp);
 			}
+            if(scroll){
+				--scroll;
+				++offset_trigger;
+			}
+			if(offset_trigger >= 16){
+				++offset;
+			}
+			}else{
+				counter =0;
+				scroll = 15;
+				offset = 0;
+				offset_trigger = 0;
+			}
+        default: 
+			state = scrolling;
 			break;
-		case pauseButton_release: break;
 	}
 	return state;
 }
@@ -122,7 +126,7 @@ int displaySMTick(int state){
 				output = led0_output | led1_output << 1;
 				break;
 		}
-		PORTB = output;
+		PORTB = output;scroll
 		return state;
 }
 
@@ -137,8 +141,8 @@ int main(void) {
 	/*unsigned char x;
 	DDRB = 0xFF; PORTB = 0x00;
 	DDRC = 0xF0; PORTC  = 0x0F;*/
-	DDRC = 0xF0; PORTC = 0x0F;
-	DDRB = 0xFF; PORTB = 0x00;
+	DDRC = 0xFF; PORTC = 0x00;
+	DDRD = 0xFF; PORTD = 0x00;
     /* Insert your solution below */
 
     static task task1;
@@ -147,10 +151,10 @@ int main(void) {
 	
     //Task 1 (pauseButtonToggleSM)
     
-    task1.state = pauseButton_wait;//Task initial state
-    task1.period = 10;//Task Period
+    task1.state = scrolling;//Task initial state
+    task1.period = 100;//Task Period
     task1.elapsedTime = task1.period;//Task current elapsed time.
-    task1.TickFct = &pauseButtonSMTick;//Function pointer for the tick
+    task1.TickFct = &LCDDisplaySM;//Function pointer for the tick
     //Task 2 (toggleLED0SM)
     /*task2.state = toggleLED0_wait;//Task initial state
     task2.period = 1000;//Task Period
@@ -169,10 +173,15 @@ int main(void) {
     //Set the timer and turn it on
 	unsigned long int GCD;
     */
-    TimerSet(1);
-    TimerOn();
-    unsigned long int GCD = 1;
+    unsigned long GCD = tasks[0]->period;
     unsigned short i;//Scheduler for-loop iterator
+    for ( i = 1; i < numTasks; i++) {
+		GCD = findGCD(GCD, tasks[i]->period);
+	}
+    TimerSet(GCD);
+    TimerOn();
+    LCD_init();
+    LCD_Cursor(1);
     while (1) {
 		for (i = 0; i < numTasks; i++) { //Scheduler code
 			if (tasks[i]->elapsedTime == tasks[i]->period) { //Task is ready to tick
@@ -180,7 +189,7 @@ int main(void) {
 				tasks[i]->elapsedTime = 0; //Reset the elapsed time for next tick;
 			}
 			tasks[i]->elapsedTime += GCD; 
-			GCD = findGCD(GCD, tasks[i]->period);
+			
 		}
 		while(!TimerFlag);
 		TimerFlag = 0;
