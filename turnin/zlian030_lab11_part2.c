@@ -31,46 +31,47 @@ unsigned char j = 0;
 //Monitors button connected to PA0.
 //When button is pressed, shared variable "pause" is toggled.
 int LCDDisplaySM(int state){
-	static unsigned char scroll = 16;
-	static unsigned char disp = 0;
-	static unsigned long crusor = 0;
-	static unsigned long offset_trigger = 0;
-	static unsigned long offset = 0;
-	static unsigned long counter = 0;
-	static unsigned int i = 16;
-	unsigned long length = sizeof(str)/sizeof(str[0]);
+	unsigned char total = 16;
+	unsigned char disp = 0;
+	unsigned long crusor = 0;
+	unsigned long currNum = 0;
+	unsigned long offset = 0;
+	unsigned long count = 0;
+	unsigned int i;
+	unsigned long strLength = sizeof(str)/sizeof(str[0]);
 	switch (state){
 		case scrolling:
-			LCD_ClearScreen();
-            LCD_Cursor(16);
-            if(counter < (length +15)){
-				++counter;
-			for(i= 16;i > scroll; --i){
-				if ((crusor = (i-scroll-1 + offset)) >= (length -1)) {
-					disp = 32;
+		    LCD_ClearScreen();
+            	    LCD_Cursor(16);
+            	    if(count < (strLength + 15)){
+			count++;
+			for(i = 16;i > total; i--){
+				if ((crusor = (i - total - 1 + offset)) >= (strLength -1)) {
+				    disp = 32;
 				}
-				else{
-					disp = str[crusor];
+				else {
+				    disp = str[crusor];
 				}
 				LCD_Cursor(i);
 				LCD_WriteData(disp);
+		        }
+            	        if (total) {
+			    total--;
+			    currNum++;
+		        }
+			if (currNum >= 16){
+			    offset++;
 			}
-            if(scroll){
-				--scroll;
-				++offset_trigger;
-			}
-			if(offset_trigger >= 16){
-				++offset;
-			}
-			}else{
-				counter =0;
-				scroll = 15;
-				offset = 0;
-				offset_trigger = 0;
-			}
-        default: 
-			state = scrolling;
-			break;
+		    }
+		    else {
+			count = 0;
+			total = 15;
+			currNum = 0;
+			offset = 0;
+		    }
+        	default: 
+		    state = scrolling;
+		    break;
 	}
 	return state;
 }
