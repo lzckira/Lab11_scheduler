@@ -169,10 +169,15 @@ int main(void) {
     //Set the timer and turn it on
 	unsigned long int GCD;
     */
-    TimerSet(1);
+	
+	
+    unsigned short i;
+    unsigned long GCD = tasks[0]->period;//Scheduler for-loop iterator
+    for ( i = 1; i < numTasks; i++) {
+		GCD = findGCD(GCD, tasks[i]->period);
+	}
+    TimerSet(GCD);
     TimerOn();
-    unsigned long int GCD = 1;
-    unsigned short i;//Scheduler for-loop iterator
     while (1) {
 		for (i = 0; i < numTasks; i++) { //Scheduler code
 			if (tasks[i]->elapsedTime == tasks[i]->period) { //Task is ready to tick
@@ -180,7 +185,6 @@ int main(void) {
 				tasks[i]->elapsedTime = 0; //Reset the elapsed time for next tick;
 			}
 			tasks[i]->elapsedTime += GCD; 
-			GCD = findGCD(GCD, tasks[i]->period);
 		}
 		while(!TimerFlag);
 		TimerFlag = 0;
